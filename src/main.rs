@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::{anyhow, bail, Context, Result};
-use clap::{CommandFactory, Parser};
+use clap::{Args, CommandFactory, Parser};
 use home;
 use regex::Regex;
 use serde::Deserialize;
@@ -31,23 +31,35 @@ struct Config {
 #[command(disable_help_subcommand = true)]
 #[command(disable_version_flag = true)]
 struct Cli {
+    /// Mode
+    #[command(flatten)]
+    mode: Mode,
+
     /// Optional config TOML path
     #[arg(short, long)]
     config: Option<PathBuf>,
 
+    /// URL to be given to actual browser, ignored if a mode is provided
+    #[arg(required_unless_present_any = ["install", "uninstall", "help", "version"])]
+    url: Option<String>,
+}
+
+#[derive(Args)]
+#[group(required = false, multiple = false)]
+struct Mode {
+    /// Specify a mode to add registry entires, not yet implemented
     #[arg(short, long)]
     install: bool,
 
+    /// Specify a mode to remove registry entires, not yet implemented
     #[arg(short, long)]
     uninstall: bool,
 
-    /// URL to be given to actual browser
-    #[arg(required_unless_present_any = ["install", "uninstall", "help", "version"])]
-    url: Option<String>,
-
+    /// Specify a mode to show help messages
     #[arg(short, long)]
     help: bool,
 
+    /// Specify a mode to show version info
     #[arg(short, long)]
     version: bool,
 }
@@ -138,13 +150,13 @@ fn process(cli : Cli) -> Result<()> {
 fn actual_main() -> Result<()> {
     let cli = Cli::try_parse()?;
 
-    if cli.install {
+    if cli.mode.install {
         install()
-    } else if cli.uninstall {
+    } else if cli.mode.uninstall {
         uninstall()
-    } else if cli.help {
+    } else if cli.mode.help {
         message(Message::Help)
-    } else if cli.version {
+    } else if cli.mode.version {
         message(Message::Version)
     } else {
         process(cli)
