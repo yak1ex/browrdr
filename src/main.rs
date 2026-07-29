@@ -47,11 +47,11 @@ struct Cli {
 #[derive(Args)]
 #[group(required = false, multiple = false)]
 struct Mode {
-    /// Specify a mode to add registry entires, not yet implemented
+    /// Specify a mode to add registry entries, not yet implemented
     #[arg(short, long)]
     install: bool,
 
-    /// Specify a mode to remove registry entires, not yet implemented
+    /// Specify a mode to remove registry entries, not yet implemented
     #[arg(short, long)]
     uninstall: bool,
 
