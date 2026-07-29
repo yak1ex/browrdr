@@ -2,7 +2,7 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, ExitCode};
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::{Args, CommandFactory, Parser};
@@ -163,10 +163,14 @@ fn actual_main() -> Result<()> {
     }
 }
 
-fn main() {
-  if let Err(err) = actual_main() {
-    let error_message = format!("{:?}", err);
-    win_msgbox::error::<win_msgbox::Okay>(&error_message)
-        .title("browrdr").show().unwrap();
-  };
+fn main() -> ExitCode {
+    let ret = if let Err(err) = actual_main() {
+        let error_message = format!("{:?}", err);
+        let _ = win_msgbox::error::<win_msgbox::Okay>(&error_message)
+            .title("browrdr").show();
+        1
+    } else {
+        0
+    };
+    ret.into()
 }
