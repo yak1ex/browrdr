@@ -94,15 +94,13 @@ fn message(mes: Message) -> Result<()> {
 */
 
 fn install() -> Result<()> {
-    println!("install: not yet implemented.");
+    bail!("install: not yet implemented.");
     // On Windows, backslash-ed path is displayed
-    println!("current_exe: {}", std::env::current_exe()?.display());
-    Ok(())
+    //println!("current_exe: {}", std::env::current_exe()?.display());
 }
 
 fn uninstall() -> Result<()> {
-    println!("uninstall: not yet implemented.");
-    Ok(())
+    bail!("uninstall: not yet implemented.");
 }
 
 fn default_path() -> Result<PathBuf> {
