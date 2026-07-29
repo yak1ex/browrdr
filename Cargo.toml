@@ -1,5 +1,5 @@
 [package]
-name = "browser"
+name = "browrdr"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,5 +8,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 clap = { version = "4.0.29", features = ["derive"] }
+home = "0.5.5"
 regex = "1.7.0"
+serde = { version = "1.0.175", features = ["derive"] }
 toml = "0.5.9"
+win-msgbox = "0.2.2"
