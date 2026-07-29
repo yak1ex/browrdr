@@ -121,9 +121,8 @@ fn default_path() -> Result<PathBuf> {
 
 fn process(cli : Cli) -> Result<()> {
     let config_path = cli.config.map_or_else(default_path, Ok)?;
-    let raw_content = fs::read(&config_path)
+    let config_content = fs::read_to_string(&config_path)
         .with_context(|| format!("Can't read the config file: {}", config_path.display()))?;
-    let config_content = String::from_utf8_lossy(&raw_content);
     let config: Config = toml::from_str(&config_content)
         .with_context(|| format!("Can't parse the config file: {} as TOML", config_path.display()))?;
     if let Some(url) = cli.url {
