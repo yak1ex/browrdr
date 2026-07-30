@@ -67,7 +67,7 @@ struct Mode {
 
 fn message(message_content: &str) -> Result<()> {
     win_msgbox::information::<win_msgbox::Okay>(message_content)
-        .title("browrdr").show().or_else(|value| Err(anyhow!("win32 error {}", value)))?;
+        .title("browrdr").show().map_err(|value| anyhow!("win32 error {}", value))?;
     Ok(())
 }
 
