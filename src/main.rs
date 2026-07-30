@@ -11,6 +11,7 @@ use regex::Regex;
 use serde::Deserialize;
 use toml;
 use win_msgbox;
+use windows_registry::CURRENT_USER;
 
 #[derive(Deserialize, Debug)]
 struct Browser {
@@ -105,10 +106,28 @@ fn message(mes: Message) -> Result<()> {
 "Browrdr"="Software\\Clients\\StartMenuInternet\\Browrdr\\Capabilities"
 */
 
+const APP_NAME : &str = "Browrdr";
+
 fn install() -> Result<()> {
-    bail!("install: not yet implemented.");
-    // On Windows, backslash-ed path is displayed
-    //println!("current_exe: {}", std::env::current_exe()?.display());
+    let current_exe = std::env::current_exe()?;
+    let key_app = CURRENT_USER.create(format!("SOFTWARE\\Classes\\{}\\Application", APP_NAME))?;
+    key_app.set_string("ApplicationDescription", APP_NAME)?;
+    key_app.set_string("ApplicationName", APP_NAME)?;
+    let key_command = CURRENT_USER.create(format!("SOFTWARE\\Classes\\{}\\shell\\open\\command", APP_NAME))?;
+    key_command.set_string("", format!("\"{}\" \"%1\"", current_exe.display()))?;
+    let key_menu = CURRENT_USER.create(format!("SOFTWARE\\Clients\\StartMenuInternet\\{}", APP_NAME))?;
+    key_menu.set_string("", APP_NAME)?;
+    let key_cap = key_menu.create("Capabilities")?;
+    key_cap.set_string("ApplicationDescription", APP_NAME)?;
+    key_cap.set_string("ApplicationName", APP_NAME)?;
+    let key_start_menu = key_cap.create("Startmenu")?;
+    key_start_menu.set_string("StartmenuInternet", APP_NAME)?;
+    let key_url_assoc = key_cap.create("URLAssociations")?;
+    key_url_assoc.set_string("http", APP_NAME)?;
+    key_url_assoc.set_string("https", APP_NAME)?;
+    let key_reg_app = CURRENT_USER.create("SOFTWARE\\RegisteredApplications")?;
+    key_reg_app.set_string(APP_NAME, format!("Software\\Clients\\StartMenuInternet\\{}\\Capabilities", APP_NAME))?;
+    Ok(())
 }
 
 fn uninstall() -> Result<()> {

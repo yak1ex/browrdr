@@ -13,3 +13,4 @@ regex = "1.7.0"
 serde = { version = "1.0.175", features = ["derive"] }
 toml = "0.5.9"
 win-msgbox = "0.2.2"
+windows-registry = "0.6.1"
