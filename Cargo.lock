@@ -79,6 +79,7 @@ dependencies = [
  "toml",
  "win-msgbox",
  "windows-registry",
+ "windows-result",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 [package]
 name = "browrdr"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,3 +14,4 @@ serde = { version = "1.0.175", features = ["derive"] }
 toml = "0.5.9"
 win-msgbox = "0.2.2"
 windows-registry = "0.6.1"
+windows-result = "0.4.1"

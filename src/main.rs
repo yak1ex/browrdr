@@ -12,6 +12,7 @@ use serde::Deserialize;
 use toml;
 use win_msgbox;
 use windows_registry::{CURRENT_USER, Key, Transaction};
+use windows_result::HRESULT;
 
 #[derive(Deserialize, Debug)]
 struct Browser {
@@ -142,20 +143,36 @@ fn install() -> Result<()> {
     Ok(())
 }
 
-fn open_key_for_remove(root: &Key, tx: &Transaction, path: &str) -> Result<Key> {
+fn open_key_for_remove(root: &Key, tx: &Transaction, path: &str) -> Result<Key, windows_result::Error> {
     let ret = root.options().write().transaction(tx).open(path)?;
     Ok(ret)
 }
 
+const ERROR_FILE_NOT_FOUND: HRESULT = HRESULT(0x80070002_u32 as i32);
+
+fn check_not_found<V>(err: windows_result::Error) -> Result<Option<V>, windows_result::Error> {
+    if err.code() == ERROR_FILE_NOT_FOUND {
+        Ok(None)
+    } else {
+        Err(err)
+    }
+}
+
+fn ok_some<V>(v: V) -> Result<Option<V>, windows_result::Error> {
+    Ok(Some(v))
+}
+
 fn uninstall() -> Result<()> {
     let tx = Transaction::new()?;
-    let key_software = open_key_for_remove(CURRENT_USER, &tx, "Software")?;
-    key_software.remove_tree(&format!("Classes\\{}", APP_NAME))?;
-    key_software.remove_tree(&format!("Clients\\StartMenuInternet\\{}", APP_NAME))?;
-    let key_reg_app = open_key_for_remove(&key_software, &tx, "RegisteredApplications")?;
-    key_reg_app.remove_value(APP_NAME)?;
+    if let Some(key_software) = open_key_for_remove(CURRENT_USER, &tx, "Software").map_or_else(check_not_found, ok_some)? {
+        let _ = key_software.remove_tree(&format!("Classes\\{}", APP_NAME)).map_or_else(check_not_found, ok_some)?;
+        let _ = key_software.remove_tree(&format!("Clients\\StartMenuInternet\\{}", APP_NAME)).map_or_else(check_not_found,ok_some)?;
+        if let Some(key_reg_app) = open_key_for_remove(&key_software, &tx, "RegisteredApplications").map_or_else(check_not_found, ok_some)? {
+            let _ = key_reg_app.remove_value(APP_NAME).map_or_else(check_not_found, ok_some)?;
+        }
+    }
     tx.commit()?;
-    message("Registry entries for browser selection are removed.")?;
+    message("Registry entries for browser selection are removed or not existed.")?;
     Ok(())
 }
 
