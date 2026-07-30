@@ -48,11 +48,11 @@ struct Cli {
 #[derive(Args)]
 #[group(required = false, multiple = false)]
 struct Mode {
-    /// Specify a mode to add registry entries, not yet implemented
+    /// Specify a mode to add registry entries
     #[arg(short, long)]
     install: bool,
 
-    /// Specify a mode to remove registry entries, not yet implemented
+    /// Specify a mode to remove registry entries
     #[arg(short, long)]
     uninstall: bool,
 
