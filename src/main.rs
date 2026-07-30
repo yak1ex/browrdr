@@ -11,7 +11,7 @@ use regex::Regex;
 use serde::Deserialize;
 use toml;
 use win_msgbox;
-use windows_registry::CURRENT_USER;
+use windows_registry::{CURRENT_USER, Key, Transaction};
 
 #[derive(Deserialize, Debug)]
 struct Browser {
@@ -65,19 +65,23 @@ struct Mode {
     version: bool,
 }
 
-enum Message {
+fn message(message_content: &str) -> Result<()> {
+    win_msgbox::information::<win_msgbox::Okay>(message_content)
+        .title("browrdr").show().or_else(|value| Err(anyhow!("win32 error {}", value)))?;
+    Ok(())
+}
+
+enum CliMessage {
   Help,
   Version
 }
 
-fn message(mes: Message) -> Result<()> {
-    let help_message = match mes {
-        Message::Help => Cli::command().render_help().to_string(),
-        Message::Version => Cli::command().render_version().to_string()
+fn cli_message(mes: CliMessage) -> Result<()> {
+    let message_content = match mes {
+        CliMessage::Help => Cli::command().render_help().to_string(),
+        CliMessage::Version => Cli::command().render_version().to_string()
     };
-    win_msgbox::information::<win_msgbox::Okay>(&help_message)
-        .title("browrdr").show().or_else(|value| Err(anyhow!("win32 error {}", value)))?;
-    Ok(())
+    message(&message_content)
 }
 
 /*
@@ -108,30 +112,51 @@ fn message(mes: Message) -> Result<()> {
 
 const APP_NAME : &str = "Browrdr";
 
+fn open_key_for_write(root: &Key, tx: &Transaction, path: &str) -> Result<Key> {
+    let ret = root.options().read().write().transaction(tx).create().open(path)?;
+    Ok(ret)
+}
+
 fn install() -> Result<()> {
     let current_exe = std::env::current_exe()?;
-    let key_app = CURRENT_USER.create(format!("SOFTWARE\\Classes\\{}\\Application", APP_NAME))?;
+    let tx = Transaction::new()?;
+    let key_app = open_key_for_write(CURRENT_USER, &tx, &format!("Software\\Classes\\{}\\Application", APP_NAME))?;
     key_app.set_string("ApplicationDescription", APP_NAME)?;
     key_app.set_string("ApplicationName", APP_NAME)?;
-    let key_command = CURRENT_USER.create(format!("SOFTWARE\\Classes\\{}\\shell\\open\\command", APP_NAME))?;
+    let key_command = open_key_for_write(CURRENT_USER, &tx, &format!("Software\\Classes\\{}\\shell\\open\\command", APP_NAME))?;
     key_command.set_string("", format!("\"{}\" \"%1\"", current_exe.display()))?;
-    let key_menu = CURRENT_USER.create(format!("SOFTWARE\\Clients\\StartMenuInternet\\{}", APP_NAME))?;
+    let key_menu = open_key_for_write(CURRENT_USER, &tx, &format!("Software\\Clients\\StartMenuInternet\\{}", APP_NAME))?;
     key_menu.set_string("", APP_NAME)?;
-    let key_cap = key_menu.create("Capabilities")?;
+    let key_cap = open_key_for_write(&key_menu, &tx, "Capabilities")?;
     key_cap.set_string("ApplicationDescription", APP_NAME)?;
     key_cap.set_string("ApplicationName", APP_NAME)?;
-    let key_start_menu = key_cap.create("Startmenu")?;
+    let key_start_menu = open_key_for_write(&key_cap, &tx, "Startmenu")?;
     key_start_menu.set_string("StartmenuInternet", APP_NAME)?;
-    let key_url_assoc = key_cap.create("URLAssociations")?;
+    let key_url_assoc = open_key_for_write(&key_cap, &tx, "URLAssociations")?;
     key_url_assoc.set_string("http", APP_NAME)?;
     key_url_assoc.set_string("https", APP_NAME)?;
-    let key_reg_app = CURRENT_USER.create("SOFTWARE\\RegisteredApplications")?;
+    let key_reg_app = open_key_for_write(CURRENT_USER, &tx, "Software\\RegisteredApplications")?;
     key_reg_app.set_string(APP_NAME, format!("Software\\Clients\\StartMenuInternet\\{}\\Capabilities", APP_NAME))?;
+    tx.commit()?;
+    message("Registry entries for browser selection are added.")?;
     Ok(())
 }
 
+fn open_key_for_remove(root: &Key, tx: &Transaction, path: &str) -> Result<Key> {
+    let ret = root.options().write().transaction(tx).open(path)?;
+    Ok(ret)
+}
+
 fn uninstall() -> Result<()> {
-    bail!("uninstall: not yet implemented.");
+    let tx = Transaction::new()?;
+    let key_software = open_key_for_remove(CURRENT_USER, &tx, "Software")?;
+    key_software.remove_tree(&format!("Classes\\{}", APP_NAME))?;
+    key_software.remove_tree(&format!("Clients\\StartMenuInternet\\{}", APP_NAME))?;
+    let key_reg_app = open_key_for_remove(&key_software, &tx, "RegisteredApplications")?;
+    key_reg_app.remove_value(APP_NAME)?;
+    tx.commit()?;
+    message("Registry entries for browser selection are removed.")?;
+    Ok(())
 }
 
 fn default_path() -> Result<PathBuf> {
@@ -173,9 +198,9 @@ fn actual_main() -> Result<()> {
     } else if cli.mode.uninstall {
         uninstall()
     } else if cli.mode.help {
-        message(Message::Help)
+        cli_message(CliMessage::Help)
     } else if cli.mode.version {
-        message(Message::Version)
+        cli_message(CliMessage::Version)
     } else {
         process(cli)
     }
